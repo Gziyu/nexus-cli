@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/BurntSushi/toml"
 )
 
 const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
-const CREDENTIALS_FILE = ".credentials"
+const CREDENTIALS_FILE = ".nexus-cli"
 
 type Registry struct {
 	Host       string `toml:"nexus_host"`
@@ -50,13 +51,23 @@ type TagInfo struct {
 
 func NewRegistry() (Registry, error) {
 	r := Registry{}
-	if _, err := os.Stat(CREDENTIALS_FILE); os.IsNotExist(err) {
-		return r, fmt.Errorf("%s file not found", CREDENTIALS_FILE)
+
+	// 获取用户主目录
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return r, fmt.Errorf("failed to get user home directory: %v", err)
+	}
+
+	// 构建配置文件完整路径
+	configPath := filepath.Join(homeDir, CREDENTIALS_FILE)
+
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return r, fmt.Errorf("configuration not found at %s - please run 'nexus-cli configure'", configPath)
 	} else if err != nil {
 		return r, err
 	}
 
-	if _, err := toml.DecodeFile(CREDENTIALS_FILE, &r); err != nil {
+	if _, err := toml.DecodeFile(configPath, &r); err != nil {
 		return r, err
 	}
 	return r, nil

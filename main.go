@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"nexus-cli/registry"
@@ -149,20 +150,38 @@ func setNexusCredentials(c *cli.Context) error {
 		repository,
 	}
 
-	tmpl, err := template.New(".credentials").Parse(CREDENTIALS_TEMPLATES)
+	tmpl, err := template.New(".nexus-cli").Parse(CREDENTIALS_TEMPLATES)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
-	f, err := os.Create(".credentials")
+	// 获取用户主目录
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("Failed to get user home directory: %v", err), 1)
+	}
+
+	// 构建配置文件完整路径
+	configPath := filepath.Join(homeDir, ".nexus-cli")
+
+	f, err := os.Create(configPath)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
+	defer f.Close()
 
 	err = tmpl.Execute(f, data)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
+
+	// 设置适当的文件权限
+	err = os.Chmod(configPath, 0600)
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("Failed to set file permissions: %v", err), 1)
+	}
+
+	fmt.Printf("Configuration saved to %s\n", configPath)
 	return nil
 }
 
