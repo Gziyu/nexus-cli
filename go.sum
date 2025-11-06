@@ -1,7 +1,5 @@
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
 github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Gziyu/nexus-cli v0.0.0-20180823085010-e9ab90ee31be h1:Te9AHoobsCtAvoDOXRTIC8dV739kNUvc2pFFqGdDzLA=
-github.com/Gziyu/nexus-cli v0.0.0-20180823085010-e9ab90ee31be/go.mod h1:vLiIreigMtC/ou9B4MY3tONnL12k+LTRLFpbZTqb0b4=
 github.com/cpuguy83/go-md2man/v2 v2.0.7 h1:zbFlGlXEAKlwXpmvle3d8Oe3YnkKIK4xSRTd3sHPnBo=
 github.com/cpuguy83/go-md2man/v2 v2.0.7/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

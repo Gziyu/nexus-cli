@@ -6,7 +6,8 @@ import (
 	"os"
 	"sort"
 
-	"github.com/Gziyu/nexus-cli/registry"
+	"nexus-cli/registry"
+
 	"github.com/urfave/cli"
 )
 
@@ -22,7 +23,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Nexus CLI"
 	app.Usage = "Manage Docker Private Registry on Nexus"
-	app.Version = "1.0.0-beta"
+	app.Version = "1.0.1-beta"
 	app.Authors = []cli.Author{
 		{
 			Name:  "Mohamed Labouardy",

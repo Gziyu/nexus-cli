@@ -5,12 +5,18 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
 // Almost completely ripped off https://www.socketloop.com/tutorials/golang-natural-string-sorting-example
 
 type Compare func(str1, str2 string) bool
+
+type TagInfo struct {
+	Name    string    `json:"name"`
+	Created time.Time `json:"created"`
+}
 
 func (cmp Compare) Sort(strs []string) {
 	strSort := &strSorter{

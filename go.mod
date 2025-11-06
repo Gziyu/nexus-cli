@@ -4,7 +4,6 @@ go 1.21.6
 
 require (
 	github.com/BurntSushi/toml v1.5.0
-	github.com/Gziyu/nexus-cli v0.0.0-20180823085010-e9ab90ee31be
 	github.com/urfave/cli v1.22.17
 )
 
