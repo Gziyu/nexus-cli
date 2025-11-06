@@ -14,45 +14,8 @@ Nexus CLI for Docker Registry
 
 ## Download
 
-Below are the available downloads for the latest version of Nexus CLI (1.0.0-beta). Please download the proper package for your operating system and architecture.
+Below are the available downloads for the latest version of Nexus CLI (1.0.1-beta). Please download the proper package for your operating system and architecture.
 
-### Linux:
-
-```
-wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/linux/nexus-cli
-```
-
-### Windows:
-
-```
-wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/windows/nexus-cli
-```
-
-### Mac OS X:
-
-```
-wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/osx/nexus-cli
-```
-
-### OpenBSD:
-
-```
-wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/openbsd/nexus-cli
-```
-
-### FreeBSD:
-
-```
-wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/freebsd/nexus-cli
-```
-
-## Installation
-
-To install the library and command line program, use the following:
-
-```
-go get -u github.com/mlabouardy/nexus-cli
-```
 
 ## Available Commands
 
