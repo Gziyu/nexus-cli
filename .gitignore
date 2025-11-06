@@ -1,3 +1,6 @@
 .idea/
 .credentials
 .DS_Store
+nexus-cli
+go.mod
+go.sum
