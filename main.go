@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"sort"
 
-	"github.com/mlabouardy/nexus-cli/registry"
+	"github.com/Gziyu/nexus-cli/registry"
 	"github.com/urfave/cli"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	app.Usage = "Manage Docker Private Registry on Nexus"
 	app.Version = "1.0.0-beta"
 	app.Authors = []cli.Author{
-		cli.Author{
+		{
 			Name:  "Mohamed Labouardy",
 			Email: "mohamed@labouardy.com",
 		},
@@ -54,6 +55,11 @@ func main() {
 						cli.StringFlag{
 							Name:  "name, n",
 							Usage: "List tags by image name",
+						},
+						cli.StringFlag{
+							Name:  "sort, s",
+							Value: "numeric",
+							Usage: "Sort order: numeric, time (chronological), time-desc (reverse chronological)",
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -87,6 +93,11 @@ func main() {
 						},
 						cli.StringFlag{
 							Name: "keep, k",
+						},
+						cli.StringFlag{
+							Name:  "sort-by",
+							Value: "numeric",
+							Usage: "Sort method for deletion: numeric, time (delete oldest), time-desc (delete newest)",
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -172,27 +183,61 @@ func listImages(c *cli.Context) error {
 
 func listTagsByImage(c *cli.Context) error {
 	var imgName = c.String("name")
+	sortMethod := c.String("sort")
+
 	r, err := registry.NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 	if imgName == "" {
 		cli.ShowSubcommandHelp(c)
+		return nil
 	}
-	tags, err := r.ListTagsByImage(imgName)
 
-	compareStringNumber := func(str1, str2 string) bool {
-		return extractNumberFromString(str1) < extractNumberFromString(str2)
-	}
-	Compare(compareStringNumber).Sort(tags)
+	switch sortMethod {
+	case "time", "time-desc":
+		tagInfos, err := r.ListTagsWithTime(imgName)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
 
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		// Sort by time
+		if sortMethod == "time" {
+			sort.Slice(tagInfos, func(i, j int) bool {
+				return tagInfos[i].Created.Before(tagInfos[j].Created)
+			})
+		} else {
+			sort.Slice(tagInfos, func(i, j int) bool {
+				return tagInfos[i].Created.After(tagInfos[j].Created)
+			})
+		}
+
+		for _, tagInfo := range tagInfos {
+			if tagInfo.Created.IsZero() {
+				fmt.Printf("%s (unknown time)\n", tagInfo.Name)
+			} else {
+				fmt.Printf("%s (%s)\n", tagInfo.Name, tagInfo.Created.Format("2006-01-02 15:04:05"))
+			}
+		}
+		fmt.Printf("There are %d tags for %s (sorted by time)\n", len(tagInfos), imgName)
+
+	default: // numeric
+		tags, err := r.ListTagsByImage(imgName)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		compareStringNumber := func(str1, str2 string) bool {
+			return extractNumberFromString(str1) < extractNumberFromString(str2)
+		}
+		Compare(compareStringNumber).Sort(tags)
+
+		for _, tag := range tags {
+			fmt.Println(tag)
+		}
+		fmt.Printf("There are %d tags for %s (sorted numerically)\n", len(tags), imgName)
 	}
-	for _, tag := range tags {
-		fmt.Println(tag)
-	}
-	fmt.Printf("There are %d images for %s\n", len(tags), imgName)
+
 	return nil
 }
 
@@ -205,6 +250,7 @@ func showImageInfo(c *cli.Context) error {
 	}
 	if imgName == "" || tag == "" {
 		cli.ShowSubcommandHelp(c)
+		return nil
 	}
 	manifest, err := r.ImageManifest(imgName, tag)
 	if err != nil {
@@ -223,41 +269,86 @@ func deleteImage(c *cli.Context) error {
 	var imgName = c.String("name")
 	var tag = c.String("tag")
 	var keep = c.Int("keep")
+	sortBy := c.String("sort-by")
+
 	if imgName == "" {
 		fmt.Fprintf(c.App.Writer, "You should specify the image name\n")
 		cli.ShowSubcommandHelp(c)
-	} else {
-		r, err := registry.NewRegistry()
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+		return nil
+	}
+
+	r, err := registry.NewRegistry()
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	if tag == "" {
+		if keep == 0 {
+			fmt.Fprintf(c.App.Writer, "You should either specify the tag or how many images you want to keep\n")
+			cli.ShowSubcommandHelp(c)
+			return nil
 		}
-		if tag == "" {
-			if keep == 0 {
-				fmt.Fprintf(c.App.Writer, "You should either specify the tag or how many images you want to keep\n")
-				cli.ShowSubcommandHelp(c)
-			} else {
-				tags, err := r.ListTagsByImage(imgName)
-				compareStringNumber := func(str1, str2 string) bool {
-					return extractNumberFromString(str1) < extractNumberFromString(str2)
-				}
-				Compare(compareStringNumber).Sort(tags)
-				if err != nil {
-					return cli.NewExitError(err.Error(), 1)
-				}
-				if len(tags) >= keep {
-					for _, tag := range tags[:len(tags)-keep] {
-						fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag)
-						r.DeleteImageByTag(imgName, tag)
-					}
-				} else {
-					fmt.Printf("Only %d images are available\n", len(tags))
-				}
-			}
-		} else {
-			err = r.DeleteImageByTag(imgName, tag)
+
+		switch sortBy {
+		case "time", "time-desc":
+			// Sort by time and delete based on time order
+			tagInfos, err := r.ListTagsWithTime(imgName)
 			if err != nil {
 				return cli.NewExitError(err.Error(), 1)
 			}
+
+			// Sort by creation time
+			if sortBy == "time" {
+				// Oldest first - we'll delete from the beginning
+				sort.Slice(tagInfos, func(i, j int) bool {
+					return tagInfos[i].Created.Before(tagInfos[j].Created)
+				})
+			} else {
+				// Newest first - we'll delete from the beginning (newest)
+				sort.Slice(tagInfos, func(i, j int) bool {
+					return tagInfos[i].Created.After(tagInfos[j].Created)
+				})
+			}
+
+			if len(tagInfos) > keep {
+				tagsToDelete := tagInfos[:len(tagInfos)-keep]
+				for _, tagInfo := range tagsToDelete {
+					fmt.Printf("%s:%s (created: %s) will be deleted ...\n",
+						imgName, tagInfo.Name,
+						tagInfo.Created.Format("2006-01-02 15:04:05"))
+					err = r.DeleteImageByTag(imgName, tagInfo.Name)
+					if err != nil {
+						fmt.Printf("Error deleting %s:%s: %v\n", imgName, tagInfo.Name, err)
+					}
+				}
+			} else {
+				fmt.Printf("Only %d images are available, nothing to delete\n", len(tagInfos))
+			}
+
+		default: // numeric sort
+			tags, err := r.ListTagsByImage(imgName)
+			if err != nil {
+				return cli.NewExitError(err.Error(), 1)
+			}
+
+			compareStringNumber := func(str1, str2 string) bool {
+				return extractNumberFromString(str1) < extractNumberFromString(str2)
+			}
+			Compare(compareStringNumber).Sort(tags)
+
+			if len(tags) >= keep {
+				for _, tag := range tags[:len(tags)-keep] {
+					fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag)
+					r.DeleteImageByTag(imgName, tag)
+				}
+			} else {
+				fmt.Printf("Only %d images are available\n", len(tags))
+			}
+		}
+	} else {
+		err = r.DeleteImageByTag(imgName, tag)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
 		}
 	}
 	return nil
@@ -265,38 +356,39 @@ func deleteImage(c *cli.Context) error {
 
 func showTotalImageSize(c *cli.Context) error {
 	var imgName = c.String("name")
-	var totalSize (int64) = 0
+	var totalSize int64 = 0
 
 	if imgName == "" {
 		cli.ShowSubcommandHelp(c)
-	} else {
-		r, err := registry.NewRegistry()
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
-		}
-
-		tags, err := r.ListTagsByImage(imgName)
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
-		}
-
-		for _, tag := range tags {
-			manifest, err := r.ImageManifest(imgName, tag)
-			if err != nil {
-				return cli.NewExitError(err.Error(), 1)
-			}
-
-			sizeInfo := make(map[string]int64)
-
-			for _, layer := range manifest.Layers {
-				sizeInfo[layer.Digest] = layer.Size
-			}
-
-			for _, size := range sizeInfo {
-				totalSize += size
-			}
-		}
-		fmt.Printf("%d %s\n", totalSize, imgName)
+		return nil
 	}
+
+	r, err := registry.NewRegistry()
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	tags, err := r.ListTagsByImage(imgName)
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	for _, tag := range tags {
+		manifest, err := r.ImageManifest(imgName, tag)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		sizeInfo := make(map[string]int64)
+
+		for _, layer := range manifest.Layers {
+			sizeInfo[layer.Digest] = layer.Size
+		}
+
+		for _, size := range sizeInfo {
+			totalSize += size
+		}
+	}
+	fmt.Printf("%d %s\n", totalSize, imgName)
 	return nil
 }

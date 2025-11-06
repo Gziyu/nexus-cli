@@ -83,6 +83,23 @@ $ nexus-cli image delete -name mlabouardy/nginx -keep 4
 ```
 $ nexus-cli image size -name mlabouardy/nginx
 ```
+
+## New Available Commands
+
+```
+# 按时间查看标签（从旧到新）
+nexus-cli image tags --name myimage --sort time
+
+# 按时间查看标签（从新到旧）
+nexus-cli image tags --name myimage --sort time-desc
+
+# 按时间排序删除，保留最新的5个
+nexus-cli image delete --name myimage --keep 5 --sort-by time
+
+# 删除最新的几个（保留旧的）
+nexus-cli image delete --name myimage --keep 5 --sort-by time-desc
+```
+
 ## Tutorials
 
 * [Cleanup old Docker images from Nexus Repository](http://www.blog.labouardy.com/cleanup-old-docker-images-from-nexus-repository/)
